@@ -53,3 +53,51 @@ export function stringToID(string: string) {
     name: parts[2],
   };
 }
+
+export function mergeGraphs(
+  g1: Graph,
+  g2: Graph,
+  nodeReducer: (GraphNode<mixed>, GraphNode<mixed>) => GraphNode<mixed>,
+  edgeReducer: (GraphEdge<mixed>, GraphEdge<mixed>) => GraphEdge<mixed>
+) {
+  const result = {nodes: {...g1.nodes}, edges: {...g1.edges}};
+  Object.keys(g2.nodes).forEach((key) => {
+    if (key in result.nodes) {
+      result.nodes[key] = nodeReducer(g1.nodes[key], g2.nodes[key]);
+    }
+  });
+  Object.keys(g2.edges).forEach((key) => {
+    if (key in result.edges) {
+      result.edges[key] = edgeReducer(g1.edges[key], g2.edges[key]);
+    }
+  });
+  return result;
+}
+
+export function mergeGraphsConsistent(g1: Graph, g2: Graph) {
+  function confluentNodeReducer(
+    a: GraphNode<mixed>,
+    b: GraphNode<mixed>
+  ): GraphNode<mixed> {
+    if (JSON.stringify(a) === JSON.stringify(b)) {
+      return a;
+    } else {
+      throw new Error(`distinct nodes with id ${stringToID(a.id)}`);
+    }
+  }
+  function confluentEdgeReducer(
+    a: GraphEdge<mixed>,
+    b: GraphEdge<mixed>
+  ): GraphEdge<mixed> {
+    if (JSON.stringify(a) === JSON.stringify(b)) {
+      return a;
+    } else {
+      throw new Error(`distinct edge with id ${stringToID(a.id)}`);
+    }
+  }
+  return mergeGraphs(g1, g2, confluentNodeReducer, confluentEdgeReducer);
+}
+
+export function mergeGraphsArbitrary(g1: Graph, g2: Graph) {
+  return mergeGraphs(g1, g2, (a, b) => b, (a, b) => b);
+}
